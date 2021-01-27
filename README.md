@@ -21,3 +21,5 @@ A lightweight C# WPF form for managing software applications which deal with reg
 -Version selector
 
 -~~Download progress bar~~
+
+-Multi-app selection
