@@ -80,6 +80,7 @@ namespace CustomGameLauncher
     {
         Ready,
         Failed,
+        Waiting,
         DownloadingGame,
         DownloadingUpdate
     }
@@ -95,6 +96,8 @@ namespace CustomGameLauncher
         string gameZip;
         string gameExe;
 
+        bool needsUpdate;
+
         LauncherStatus _status;
         internal LauncherStatus Status
         {
@@ -109,6 +112,9 @@ namespace CustomGameLauncher
                         break;
                     case LauncherStatus.Failed:
                         PlayButton.Content = "Update Failed - Retry";
+                        break;
+                    case LauncherStatus.Waiting:
+                        PlayButton.Content = "Start Download";
                         break;
                     case LauncherStatus.DownloadingGame:
                         PlayButton.Content = "Downloading Game...";
@@ -152,8 +158,10 @@ namespace CustomGameLauncher
                     // If the local version is different from the online version...
                     if (onlineVersion.IsDifferentThan(localVersion))
                     {
-                        // Install the update files and update the local version number.
-                        InstallGameFiles(true, onlineVersion);
+                        // Set the launcher status to waiting and prompt the user to initiate download.
+                        needsUpdate = true;
+                        Status = LauncherStatus.Waiting;
+                        PercentageText.Text = "There is an update available.";
                     }
                     // Otherwise...
                     else
@@ -174,8 +182,10 @@ namespace CustomGameLauncher
             // If a local version does not exist...
             else
             {
-                // Download a brand new installation.
-                InstallGameFiles(false, Version.zero);
+                // Set the launcher status to waiting and prompt the user to initiate download.
+                needsUpdate = false;
+                Status = LauncherStatus.Waiting;
+                PercentageText.Text = "There is an update available.";
             }
         }
 
@@ -293,6 +303,27 @@ namespace CustomGameLauncher
         // Play button click event.
         private void PlayButton_Click(object sender, RoutedEventArgs e)
         {
+            // Special case when the user has first booted up the launcher.
+            if (Status == LauncherStatus.Waiting)
+            {
+                // If a local version does not exist...
+                if (!needsUpdate)
+                {
+                    // Download a brand new installation.
+                    InstallGameFiles(needsUpdate, Version.zero);
+                }
+                else
+                {
+                    // Install the update files and update the local version number.
+                    WebClient webClient = new WebClient();
+                    Version onlineVersion = new Version(webClient.DownloadString("https://github.com/SheaMcAuley995/Cosmechanics/releases/latest/download/Version.txt")); // <- Where the version file is found.
+                    
+                    InstallGameFiles(needsUpdate, onlineVersion);
+                }
+
+                return;
+            }
+
             var path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
             var folder = Path.Combine(path, "Cafe Interstellar");
             gameExe = Path.Combine(folder, "Cosmechanics_Build", "ProjectFlorpMajor.exe");
