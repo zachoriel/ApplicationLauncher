@@ -6,20 +6,24 @@ A lightweight C# WPF form for managing software applications which deal with reg
 
 -File downloading
 
--Automatic updates
+-Automatic update checking
 
 -Version tracking
 
 -Download progress bar
 
+-Multi-app selection
+
+-User-initiated downloads (rather than automatic)
+
 **PLANNED FEATURES:**
 
 -Customizable install locations
 
--Option to disable automatic updates
+-~~User-initiated downloads (rather than automatic)~~
 
--Version selector
+-Version selection
 
 -~~Download progress bar~~
 
--Multi-app selection
+-~~Multi-app selection~~
