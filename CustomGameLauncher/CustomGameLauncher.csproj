@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>hnet.com-image.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Images\Cafe_Interstellar_Splash_screen.png" />
+    <None Remove="Images\Cafe_Interstellar_Splash_screen_B.png" />
+    <None Remove="Images\CosmechanicsImage.jpg" />
+    <None Remove="Images\CosmechanicsImage2.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Images\Cafe_Interstellar_Splash_screen.png" />
+    <Resource Include="Images\Cafe_Interstellar_Splash_screen_B.png" />
+    <Resource Include="Images\CosmechanicsImage.jpg" />
+    <Resource Include="Images\CosmechanicsImage2.png" />
+  </ItemGroup>
+
+</Project>
