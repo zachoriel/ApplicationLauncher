@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Windows;
+using System.Windows.Media.Imaging;
 
 namespace CustomGameLauncher
 {
@@ -296,6 +297,28 @@ namespace CustomGameLauncher
 
         private void Window_ContentRendered(object sender, EventArgs e)
         {
+            
+        }
+
+        private void CosmechanicsButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Show the update screen elements.
+            LoadingBar.Visibility = Visibility.Visible;
+            LoadingBar.IsEnabled = true;
+            PercentageText.Visibility = Visibility.Visible;
+            PercentageText.IsEnabled = true;
+            PlayButton.Visibility = Visibility.Visible;
+            PlayButton.IsEnabled = true;
+
+            // Hide the game selection elements.
+            GameSelectionText.Visibility = Visibility.Hidden;
+            GameSelectionText.IsEnabled = false;
+            CosmechanicsButton.Visibility = Visibility.Hidden;
+            CosmechanicsButton.IsEnabled = false;
+
+            // Change the background image.
+            BackgroundImage.Source = new BitmapImage(new Uri(@"/CustomGameLauncher;component/Images/CosmechanicsImage2.png", UriKind.Relative));
+
             // Check for updates as soon as the launcher opens & renders.
             CheckForUpdates();
         }

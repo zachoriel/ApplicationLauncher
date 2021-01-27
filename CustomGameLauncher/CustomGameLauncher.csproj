@@ -12,6 +12,7 @@
     <None Remove="Images\Cafe_Interstellar_Splash_screen_B.png" />
     <None Remove="Images\CosmechanicsImage.jpg" />
     <None Remove="Images\CosmechanicsImage2.png" />
+    <None Remove="Images\Helmet.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,6 +20,7 @@
     <Resource Include="Images\Cafe_Interstellar_Splash_screen_B.png" />
     <Resource Include="Images\CosmechanicsImage.jpg" />
     <Resource Include="Images\CosmechanicsImage2.png" />
+    <Resource Include="Images\Helmet.png" />
   </ItemGroup>
 
 </Project>

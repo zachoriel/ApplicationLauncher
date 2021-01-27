@@ -9,10 +9,14 @@
         ContentRendered="Window_ContentRendered"
         Title="Launcher" Height="576" Width="1080">
     <Grid>
-        <Image Stretch="UniformToFill" Source="Images/Cafe_Interstellar_Splash_screen_B.png"/>
+        <Image x:Name="BackgroundImage" Stretch="UniformToFill" Source="Images/Cafe_Interstellar_Splash_screen_B.png"/>
         <TextBlock Name ="VersionText" VerticalAlignment="Bottom" HorizontalAlignment="Right" FontSize="20" Foreground="Gold" Margin="0, 0, 5, 0"/>
-        <Button Name="PlayButton" Content="Checking For Updates..." Click="PlayButton_Click" Height="60" Width="360" FontSize="28" FontWeight="Bold" Foreground="White" Margin="0, 0, 0, 100" VerticalAlignment="Bottom" HorizontalAlignment="Center" MinWidth="150" Background="#FFECB90B" Padding="10, 1" />
-        <ProgressBar x:Name="LoadingBar" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,30" Value="0" Foreground="#FF63D7EA" Height="40" Width="480" MinWidth="200" Padding="10, 1" />
-        <TextBlock x:Name="PercentageText" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,25" TextAlignment="Center" TextWrapping="Wrap" Width="480" MinWidth="200" Height="40" FontSize="20" Text="Waiting for download..."/>
+        <Button Name="PlayButton" Visibility="Hidden" IsEnabled="False" Content="Checking For Updates..." Click="PlayButton_Click" Height="60" Width="360" FontSize="28" FontWeight="Bold" Foreground="White" Margin="0, 0, 0, 100" VerticalAlignment="Bottom" HorizontalAlignment="Center" MinWidth="150" Background="#FFECB90B" Padding="10, 1" />
+        <ProgressBar x:Name="LoadingBar" Visibility="Hidden" IsEnabled="False" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,30" Value="0" Foreground="#FF63D7EA" Height="40" Width="480" MinWidth="200" Padding="10, 1" />
+        <TextBlock x:Name="PercentageText" Visibility="Hidden" IsEnabled="False" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,25" TextAlignment="Center" TextWrapping="Wrap" Width="480" MinWidth="200" Height="40" FontSize="20" Text="Waiting for download..."/>
+        <Button x:Name="CosmechanicsButton" Visibility="Visible" IsEnabled="True" HorizontalAlignment="Center" Margin="0,150,0,0" VerticalAlignment="Center" Click="CosmechanicsButton_Click">
+            <Image Height="128" Stretch="Fill" Width="128" Source="/Images/Helmet.png"/>
+        </Button>
+        <TextBlock x:Name="GameSelectionText" Visibility="Visible" IsEnabled="True" HorizontalAlignment="Center" Margin="0,210,0,0" Text="Please select a game below." TextWrapping="Wrap" VerticalAlignment="Top" Foreground="#FF00AEFF" Width="480" MinWidth="200" Height="50" FontSize="30" TextAlignment="Center"/>
     </Grid>
 </Window>
