@@ -70,6 +70,30 @@ namespace CustomGameLauncher
             return false;
         }
 
+        // Method for comparing online version with local game version.
+        internal bool IsGreaterThan(Version _localVersion)
+        {
+            if (major > _localVersion.major)
+            {
+                return true;
+            }
+            else
+            {
+                if (minor > _localVersion.minor)
+                {
+                    return true;
+                }
+                else
+                {
+                    if (subMinor > _localVersion.subMinor)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         // ToString() override to return the version numbers separated by dots.
         public override string ToString()
         {
@@ -91,13 +115,14 @@ namespace CustomGameLauncher
     /// </summary>
     public partial class MainWindow : Window
     {
+        // File paths.
         string rootPath;
         string extractionPath;
         string versionFile;
         string gameZip;
         string gameExe;
 
-        bool needsUpdate;
+        bool needsUpdate; // Helps control the type of download.
 
         LauncherStatus _status;
         internal LauncherStatus Status
@@ -157,7 +182,7 @@ namespace CustomGameLauncher
                     Version onlineVersion = new Version(webClient.DownloadString("https://github.com/SheaMcAuley995/Cosmechanics/releases/latest/download/Version.txt")); // <- Where the version file is found.
 
                     // If the local version is different from the online version...
-                    if (onlineVersion.IsDifferentThan(localVersion))
+                    if (onlineVersion.IsGreaterThan(localVersion))
                     {
                         // Set the launcher status to waiting and prompt the user to initiate download.
                         needsUpdate = true;
@@ -311,6 +336,8 @@ namespace CustomGameLauncher
             PlayButton.IsEnabled = true;
             BackButton.Visibility = Visibility.Visible;
             BackButton.IsEnabled = true;
+            VersionText.Visibility = Visibility.Visible;
+            VersionText.IsEnabled = true;
 
             // Hide the game selection elements.
             GameSelectionText.Visibility = Visibility.Hidden;
@@ -345,6 +372,8 @@ namespace CustomGameLauncher
                 PlayButton.IsEnabled = false;
                 BackButton.Visibility = Visibility.Hidden;
                 BackButton.IsEnabled = false;
+                VersionText.Visibility = Visibility.Hidden;
+                VersionText.IsEnabled = false;
 
                 // Change the background image.
                 BackgroundImage.Source = new BitmapImage(new Uri(@"/CustomGameLauncher;component/Images/Cafe_Interstellar_Splash_screen_B.png", UriKind.Relative));
