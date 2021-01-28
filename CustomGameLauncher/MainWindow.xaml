@@ -18,5 +18,6 @@
             <Image Height="128" Stretch="Fill" Width="128" Source="/Images/Helmet.png"/>
         </Button>
         <TextBlock x:Name="GameSelectionText" Visibility="Visible" IsEnabled="True" HorizontalAlignment="Center" Margin="0,210,0,0" Text="Please select a game below." TextWrapping="Wrap" VerticalAlignment="Top" Foreground="#FF00AEFF" Width="480" MinWidth="200" Height="50" FontSize="30" TextAlignment="Center"/>
+        <Button x:Name="BackButton" Visibility="Hidden" IsEnabled="False" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="10,0,0,10" Click="BackButton_Click" Content="Back" Height="40" Width="180" FontSize="28" FontWeight="Bold" Foreground="White" MinWidth="75" Background="#FFECB90B" />
     </Grid>
 </Window>

@@ -309,6 +309,8 @@ namespace CustomGameLauncher
             PercentageText.IsEnabled = true;
             PlayButton.Visibility = Visibility.Visible;
             PlayButton.IsEnabled = true;
+            BackButton.Visibility = Visibility.Visible;
+            BackButton.IsEnabled = true;
 
             // Hide the game selection elements.
             GameSelectionText.Visibility = Visibility.Hidden;
@@ -321,6 +323,32 @@ namespace CustomGameLauncher
 
             // Check for updates as soon as the launcher opens & renders.
             CheckForUpdates();
+        }
+
+        private void BackButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Only go back to game selection if a download is not in progress.
+            if (Status != LauncherStatus.DownloadingGame && Status != LauncherStatus.DownloadingUpdate)
+            {
+                // Show the game selection elements.
+                GameSelectionText.Visibility = Visibility.Visible;
+                GameSelectionText.IsEnabled = true;
+                CosmechanicsButton.Visibility = Visibility.Visible;
+                CosmechanicsButton.IsEnabled = true;
+
+                // Hide the update screen elements.
+                LoadingBar.Visibility = Visibility.Hidden;
+                LoadingBar.IsEnabled = false;
+                PercentageText.Visibility = Visibility.Hidden;
+                PercentageText.IsEnabled = false;
+                PlayButton.Visibility = Visibility.Hidden;
+                PlayButton.IsEnabled = false;
+                BackButton.Visibility = Visibility.Hidden;
+                BackButton.IsEnabled = false;
+
+                // Change the background image.
+                BackgroundImage.Source = new BitmapImage(new Uri(@"/CustomGameLauncher;component/Images/Cafe_Interstellar_Splash_screen_B.png", UriKind.Relative));
+            }
         }
 
         // Play button click event.
