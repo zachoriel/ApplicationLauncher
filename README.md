@@ -1,6 +1,6 @@
 # AppLauncher
 
-A lightweight C# WPF form for managing software applications which deal with regular updates. 
+A self-contained C# WPF form for managing software applications which deal with regular updates. 
 
 **COMPLETED FEATURES:**
 
@@ -22,11 +22,11 @@ A lightweight C# WPF form for managing software applications which deal with reg
 
 -Automatic self-updating
 
+-Version selection
+
 -~~Customizable install locations~~
 
 -~~User-initiated downloads (rather than automatic)~~
-
--Version selection
 
 -~~Download progress bar~~
 
