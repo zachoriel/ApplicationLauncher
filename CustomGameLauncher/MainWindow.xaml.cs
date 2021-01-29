@@ -520,7 +520,7 @@ namespace CustomGameLauncher
                 return;
             }
 
-            var path = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            var path = extractionPath;
             var folder = Path.Combine(path, "Cafe Interstellar");
             gameExe = Path.Combine(folder, "Cosmechanics_Build", "ProjectFlorpMajor.exe");
 
