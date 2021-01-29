@@ -161,10 +161,12 @@ namespace CustomGameLauncher
         public MainWindow()
         {
             InitializeComponent();
+
+            rootPath = Directory.GetCurrentDirectory(); // The game will download here, but be extracted elsewhere.
         }
 
         // Function which checks online for a new game version.
-        void CheckForUpdates()
+        void CheckForUpdates(string webLink)
         {
             // If a local version already exists...
             if (File.Exists(versionFile))
@@ -177,7 +179,7 @@ namespace CustomGameLauncher
                 {
                     // Retrieve the most recent online version from the download site.
                     WebClient webClient = new WebClient();
-                    Version onlineVersion = new Version(webClient.DownloadString("https://github.com/SheaMcAuley995/Cosmechanics/releases/latest/download/Version.txt")); // <- Where the version file is found.
+                    Version onlineVersion = new Version(webClient.DownloadString(webLink)); // <- Where the version file is found.
 
                     // If the local version is different from the online version...
                     if (onlineVersion.IsGreaterThan(localVersion))
@@ -209,7 +211,7 @@ namespace CustomGameLauncher
                 // Set the launcher status to waiting and prompt the user to initiate download.
                 needsUpdate = false;
                 Status = LauncherStatus.Waiting;
-                PercentageText.Text = "There is an update available.";
+                PercentageText.Text = "Game available for download.";
             }
         }
 
@@ -320,37 +322,80 @@ namespace CustomGameLauncher
 
         private void Window_ContentRendered(object sender, EventArgs e)
         {
-            // Check if a saved install location file exists in the launcher's working directory.
-            savedLocData = Path.Combine(Directory.GetCurrentDirectory(), "Saved Install Location.txt");
-            if (!File.Exists(savedLocData))
-            {
-                // Create the file and write a temporary empty line.
-                using (StreamWriter sw = File.CreateText(savedLocData))
-                {
-                    sw.WriteLine("");
-                }
+            versionFile = Path.Combine(Directory.GetCurrentDirectory(), "Version.txt");
 
-                // Prompt the user to pick an installation location.
-                System.Windows.MessageBox.Show("Please select an install location.");
-                PickLocation();
+            // If a local version already exists...
+            if (File.Exists(versionFile))
+            {
+                // Get the local version number and set it to the launcher's VersionText.
+                Version localVersion = new Version(File.ReadAllText(versionFile));
+
+                try
+                {
+                    // Retrieve the most recent online version from the download site.
+                    WebClient webClient = new WebClient();
+                    Version onlineVersion = new Version(webClient.DownloadString("https://github.com/zachoriel/ApplicationLauncher/releases/latest/download/Version.txt")); // <- Where the version file is found.
+
+                    // If the local version is different from the online version...
+                    if (onlineVersion.IsGreaterThan(localVersion))
+                    {
+                        // Ask the user if they'd like to download the new version.
+                        System.Windows.MessageBoxResult result = System.Windows.MessageBox.Show("It looks like there's a newer version " +
+                            "of this launcher available. Would you like to download it?", "New Version Available!", MessageBoxButton.YesNo,
+                            MessageBoxImage.Information);
+
+                        // If they clicked yes...
+                        if (result.ToString() == "Yes")
+                        {
+                            // Download the new version from the releases page.
+                            var startInfo = new ProcessStartInfo()
+                            {
+                                FileName = "https://github.com/zachoriel/ApplicationLauncher/releases/latest/download/ApplicationLauncher_Windows.zip",
+                                UseShellExecute = true
+                            };
+                            Process.Start(startInfo);
+
+                            Close();
+                        }
+                    }
+                    // Otherwise...
+                    else
+                    {
+                        // Set launcher status to Ready.
+                        Status = LauncherStatus.Ready;
+                        PercentageText.Text = "Game up to date. Ready to play!";
+                    }
+                }
+                // This should only happen if the download location changes and nobody updates the web link stored into onlineVersion,
+                // or if there are connection problems.
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"Error checking for launcher updates: {ex}");
+                }
             }
+            // There should always be a local version file for the launcher. The only reason there wouldn't be is if Zach forgets to put one 
+            // in the uploaded files. If that happens, we'll assume that the user has the most up to date version by creating a version file
+            // and assigning its contents to that of the latest online version. Then they will be notified of any future updates.
             else
             {
-                // Read from the saved install location file and store the contents into extractionPath.
-                using (StreamReader sr = File.OpenText(savedLocData))
+                // Retrieve the most recent online version from the download site.
+                WebClient webClient = new WebClient();
+                Version onlineVersion = new Version(webClient.DownloadString("https://github.com/zachoriel/ApplicationLauncher/releases/latest/download/Version.txt")); // <- Where the version file is found.
+
+                // Create a version file and write the online version string into it.
+                string localVersionPath = Path.Combine(Directory.GetCurrentDirectory(), "Version.txt");
+                using (StreamWriter sw = File.CreateText(localVersionPath))
                 {
-                    extractionPath = sr.ReadLine();
+                    sw.WriteLine(onlineVersion);
                 }
             }
-
-            rootPath = Directory.GetCurrentDirectory(); // The game will download here, but be extracted elsewhere.
-            versionFile = Path.Combine(extractionPath, "Cafe Interstellar", "Cosmechanics_Build", "Version.txt");
-            gameZip = Path.Combine(rootPath, "Cosmechanics_Build.zip"); // <- Will need to be maintained OR kept consistent.
-            gameExe = Path.Combine(rootPath, "Cosmechanics_Build", "ProjectFlorpMajor.exe"); // <- Will need to be maintained OR kept consistent.
         }
 
-        // Allows users to select a location for their downloaded software.
-        void PickLocation()
+        /// <summary>
+        /// Allows users to select a location for their downloaded software.
+        /// </summary>
+        /// <param name="changingLocation"> False if the install location is being picked for the first time, true if it's being changed. </param>
+        void PickLocation(bool changingLocation)
         {
             using (var browserDialog = new FolderBrowserDialog())
             {
@@ -363,6 +408,18 @@ namespace CustomGameLauncher
                     // If the user has writing permissions to their selected directory...
                     if (DirectoryHasPermissions(browserDialog.SelectedPath, FileSystemRights.CreateDirectories))
                     {
+                        // If an installation already exists and we're changing the path...
+                        if (changingLocation)
+                        {
+                            // If the new location is not the same as the old location...
+                            if (browserDialog.SelectedPath != extractionPath)
+                            {
+                                // Move the existing install to the newly selected installation location.
+                                string existingInstall = Path.Combine(extractionPath, "Cafe Interstellar");
+                                Directory.Move(existingInstall, browserDialog.SelectedPath + "/Cafe Interstellar");
+                            }
+                        }
+
                         // Store the selected directory as the extraction path.
                         extractionPath = browserDialog.SelectedPath;
 
@@ -377,7 +434,7 @@ namespace CustomGameLauncher
                     {
                         // Display an error message prompting the user to retry and recursively call the function.
                         System.Windows.MessageBox.Show("Sorry, you do not have system permissions to install in that location. Please try somewhere else (example: Desktop or Games)");
-                        PickLocation();
+                        PickLocation(changingLocation);
                     }
                 }
                 // If the selected directory is not valid...
@@ -385,7 +442,7 @@ namespace CustomGameLauncher
                 {
                     // Display an error message prompting the user to retry and recursively call the function.
                     System.Windows.MessageBox.Show("Sorry, that location is invalid. Please try somewhere else (example: Desktop)");
-                    PickLocation();
+                    PickLocation(changingLocation);
                 }
             }
         }
@@ -434,7 +491,7 @@ namespace CustomGameLauncher
 
         private void ChangeInstallLocation_Click(object sender, RoutedEventArgs e)
         {
-            PickLocation();
+            PickLocation(true);
         }
 
         private void CosmechanicsButton_Click(object sender, RoutedEventArgs e)
@@ -450,20 +507,46 @@ namespace CustomGameLauncher
             BackButton.IsEnabled = true;
             VersionText.Visibility = Visibility.Visible;
             VersionText.IsEnabled = true;
+            ChangeLocationButton.Visibility = Visibility.Visible;
+            ChangeLocationButton.IsEnabled = true;
 
             // Hide the game selection elements.
             GameSelectionText.Visibility = Visibility.Hidden;
             GameSelectionText.IsEnabled = false;
             CosmechanicsButton.Visibility = Visibility.Hidden;
             CosmechanicsButton.IsEnabled = false;
-            ChangeLocationButton.Visibility = Visibility.Hidden;
-            ChangeLocationButton.IsEnabled = false;
 
             // Change the background image.
             BackgroundImage.Source = new BitmapImage(new Uri(@"/CustomGameLauncher;component/Images/CosmechanicsImage2.png", UriKind.Relative));
 
-            // Check for updates as soon as the launcher opens & renders.
-            CheckForUpdates();
+            // Check if a saved install location file exists in the launcher's working directory.
+            savedLocData = Path.Combine(Directory.GetCurrentDirectory(), "Saved Install Location.txt");
+            if (!File.Exists(savedLocData))
+            {
+                // Create the file and write a temporary empty line.
+                using (StreamWriter sw = File.CreateText(savedLocData))
+                {
+                    sw.WriteLine("");
+                }
+
+                // Prompt the user to pick an installation location.
+                System.Windows.MessageBox.Show("Please select an install location.");
+                PickLocation(false);
+            }
+            else
+            {
+                // Read from the saved install location file and store the contents into extractionPath.
+                using (StreamReader sr = File.OpenText(savedLocData))
+                {
+                    extractionPath = sr.ReadLine();
+                }
+            }
+
+            versionFile = Path.Combine(extractionPath, "Cafe Interstellar", "Cosmechanics_Build", "Version.txt");
+            gameZip = Path.Combine(rootPath, "Cosmechanics_Build.zip"); // <- Will need to be maintained OR kept consistent.
+
+            // Check for updates as soon as the install location is determined.
+            CheckForUpdates("https://github.com/SheaMcAuley995/Cosmechanics/releases/latest/download/Version.txt");
         }
 
         private void BackButton_Click(object sender, RoutedEventArgs e)
@@ -476,8 +559,6 @@ namespace CustomGameLauncher
                 GameSelectionText.IsEnabled = true;
                 CosmechanicsButton.Visibility = Visibility.Visible;
                 CosmechanicsButton.IsEnabled = true;
-                ChangeLocationButton.Visibility = Visibility.Visible;
-                ChangeLocationButton.IsEnabled = true;
 
                 // Hide the update screen elements.
                 LoadingBar.Visibility = Visibility.Hidden;
@@ -490,6 +571,8 @@ namespace CustomGameLauncher
                 BackButton.IsEnabled = false;
                 VersionText.Visibility = Visibility.Hidden;
                 VersionText.IsEnabled = false;
+                ChangeLocationButton.Visibility = Visibility.Hidden;
+                ChangeLocationButton.IsEnabled = false;
 
                 // Change the background image.
                 BackgroundImage.Source = new BitmapImage(new Uri(@"/CustomGameLauncher;component/Images/Cafe_Interstellar_Splash_screen_B.png", UriKind.Relative));
@@ -539,7 +622,7 @@ namespace CustomGameLauncher
             else if (Status == LauncherStatus.Failed)
             {
                 // Check again for updates.
-                CheckForUpdates();
+                CheckForUpdates("https://github.com/SheaMcAuley995/Cosmechanics/releases/latest/download/Version.txt");
             }
             else if (!File.Exists(gameExe))
             {
