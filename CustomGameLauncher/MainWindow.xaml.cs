@@ -6,6 +6,9 @@ using System.IO.Compression;
 using System.Net;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using System.Windows.Forms;
+using System.Security.AccessControl;
+using System.Security.Principal;
 
 namespace CustomGameLauncher
 {
@@ -116,6 +119,7 @@ namespace CustomGameLauncher
     public partial class MainWindow : Window
     {
         // File paths.
+        string savedLocData;
         string rootPath;
         string extractionPath;
         string versionFile;
@@ -157,12 +161,6 @@ namespace CustomGameLauncher
         public MainWindow()
         {
             InitializeComponent();
-
-            rootPath = Directory.GetCurrentDirectory(); // The game will download here, but be extracted elsewhere.
-            extractionPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            versionFile = Path.Combine(extractionPath, "Cafe Interstellar", "Cosmechanics_Build", "Version.txt");
-            gameZip = Path.Combine(rootPath, "Cosmechanics_Build.zip"); // <- Will need to be maintained OR kept consistent.
-            gameExe = Path.Combine(rootPath, "Cosmechanics_Build", "ProjectFlorpMajor.exe"); // <- Will need to be maintained OR kept consistent.
         }
 
         // Function which checks online for a new game version.
@@ -202,7 +200,7 @@ namespace CustomGameLauncher
                 catch (Exception ex)
                 {
                     Status = LauncherStatus.Failed;
-                    MessageBox.Show($"Error checking for game updates: {ex}");
+                    System.Windows.MessageBox.Show($"Error checking for game updates: {ex}");
                 }
             }
             // If a local version does not exist...
@@ -250,7 +248,7 @@ namespace CustomGameLauncher
             catch (Exception ex)
             {
                 Status = LauncherStatus.Failed;
-                MessageBox.Show($"Error installing game files: {ex}");
+                System.Windows.MessageBox.Show($"Error installing game files: {ex}");
             }
         }
 
@@ -265,7 +263,7 @@ namespace CustomGameLauncher
             }
             catch (Exception ex) // I can't think of a reason this would occur, but I like to have the catch just in case.
             {
-                MessageBox.Show($"Error displaying download progress: {ex}");
+                System.Windows.MessageBox.Show($"Error displaying download progress: {ex}");
             }
         }
 
@@ -316,13 +314,127 @@ namespace CustomGameLauncher
                 }
 
                 Status = LauncherStatus.Failed;
-                MessageBox.Show($"Error finishing download: {ex}");
+                System.Windows.MessageBox.Show($"Error finishing download: {ex}");
             }
         }
 
         private void Window_ContentRendered(object sender, EventArgs e)
         {
-            
+            // Check if a saved install location file exists in the launcher's working directory.
+            savedLocData = Path.Combine(Directory.GetCurrentDirectory(), "Saved Install Location.txt");
+            if (!File.Exists(savedLocData))
+            {
+                // Create the file and write a temporary empty line.
+                using (StreamWriter sw = File.CreateText(savedLocData))
+                {
+                    sw.WriteLine("");
+                }
+
+                // Prompt the user to pick an installation location.
+                System.Windows.MessageBox.Show("Please select an install location.");
+                PickLocation();
+            }
+            else
+            {
+                // Read from the saved install location file and store the contents into extractionPath.
+                using (StreamReader sr = File.OpenText(savedLocData))
+                {
+                    extractionPath = sr.ReadLine();
+                }
+            }
+
+            rootPath = Directory.GetCurrentDirectory(); // The game will download here, but be extracted elsewhere.
+            versionFile = Path.Combine(extractionPath, "Cafe Interstellar", "Cosmechanics_Build", "Version.txt");
+            gameZip = Path.Combine(rootPath, "Cosmechanics_Build.zip"); // <- Will need to be maintained OR kept consistent.
+            gameExe = Path.Combine(rootPath, "Cosmechanics_Build", "ProjectFlorpMajor.exe"); // <- Will need to be maintained OR kept consistent.
+        }
+
+        // Allows users to select a location for their downloaded software.
+        void PickLocation()
+        {
+            using (var browserDialog = new FolderBrowserDialog())
+            {
+                // Bring up the Windows system's Browse window.
+                DialogResult result = browserDialog.ShowDialog();
+
+                // If the selected directory is valid and not empty...
+                if (result == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(browserDialog.SelectedPath))
+                {
+                    // If the user has writing permissions to their selected directory...
+                    if (DirectoryHasPermissions(browserDialog.SelectedPath, FileSystemRights.CreateDirectories))
+                    {
+                        // Store the selected directory as the extraction path.
+                        extractionPath = browserDialog.SelectedPath;
+
+                        // Write the selected path to the saved install location document.
+                        using (StreamWriter sw = File.CreateText(savedLocData))
+                        {
+                            sw.WriteLine(browserDialog.SelectedPath);
+                        }
+                    }
+                    // If they don't have the right permissions...
+                    else
+                    {
+                        // Display an error message prompting the user to retry and recursively call the function.
+                        System.Windows.MessageBox.Show("Sorry, you do not have system permissions to install in that location. Please try somewhere else (example: Desktop or Games)");
+                        PickLocation();
+                    }
+                }
+                // If the selected directory is not valid...
+                else
+                {
+                    // Display an error message prompting the user to retry and recursively call the function.
+                    System.Windows.MessageBox.Show("Sorry, that location is invalid. Please try somewhere else (example: Desktop)");
+                    PickLocation();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if the user has permissions to a given directory.
+        /// </summary>
+        /// <param name="folderPath"> The full path to be checked for permissions. </param>
+        /// <param name="accessRight"> The access right to be checked for. Example: 'Write' or 'CreateDirectories'. </param>
+        /// <returns> True if the user does have the passed-in access right, false if they do not. </returns>
+        bool DirectoryHasPermissions(string folderPath, FileSystemRights accessRight)
+        {
+            // Automatically return false if the path is empty.
+            if (string.IsNullOrEmpty(folderPath)) return false;
+
+            try
+            {
+                // Get access rules for the current user.
+                DirectoryInfo di = new DirectoryInfo(folderPath);
+                AuthorizationRuleCollection rules = di.GetAccessControl().GetAccessRules(true, true, typeof(System.Security.Principal.SecurityIdentifier));
+                WindowsIdentity identity = WindowsIdentity.GetCurrent(); // The logged-in user.
+
+                // For every file access rule...
+                foreach (FileSystemAccessRule rule in rules)
+                {
+                    // If the user has a permission rule...
+                    if (identity.Groups.Contains(rule.IdentityReference) || identity.Owner.Equals(rule.IdentityReference))
+                    {
+                        // If that permission rule matches the one we're checking for...
+                        if ((accessRight & rule.FileSystemRights) == accessRight)
+                        {
+                            // If that permission is set to 'Allow'...
+                            if (rule.AccessControlType == AccessControlType.Allow)
+                            {
+                                // The user has permissions for that folder and we can return true.
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            // Return false by default if the check cannot be performed.
+            catch { }
+            return false;
+        }
+
+        private void ChangeInstallLocation_Click(object sender, RoutedEventArgs e)
+        {
+            PickLocation();
         }
 
         private void CosmechanicsButton_Click(object sender, RoutedEventArgs e)
@@ -344,6 +456,8 @@ namespace CustomGameLauncher
             GameSelectionText.IsEnabled = false;
             CosmechanicsButton.Visibility = Visibility.Hidden;
             CosmechanicsButton.IsEnabled = false;
+            ChangeLocationButton.Visibility = Visibility.Hidden;
+            ChangeLocationButton.IsEnabled = false;
 
             // Change the background image.
             BackgroundImage.Source = new BitmapImage(new Uri(@"/CustomGameLauncher;component/Images/CosmechanicsImage2.png", UriKind.Relative));
@@ -362,6 +476,8 @@ namespace CustomGameLauncher
                 GameSelectionText.IsEnabled = true;
                 CosmechanicsButton.Visibility = Visibility.Visible;
                 CosmechanicsButton.IsEnabled = true;
+                ChangeLocationButton.Visibility = Visibility.Visible;
+                ChangeLocationButton.IsEnabled = true;
 
                 // Hide the update screen elements.
                 LoadingBar.Visibility = Visibility.Hidden;
@@ -427,7 +543,7 @@ namespace CustomGameLauncher
             }
             else if (!File.Exists(gameExe))
             {
-                MessageBox.Show("Error: Application executable not found. This may be the result of a moved or deleted .exe file, or perhaps Zach" +
+                System.Windows.MessageBox.Show("Error: Application executable not found. This may be the result of a moved or deleted .exe file, or perhaps Zach" +
                     " needs to update the filepaths.");
             }
         }
