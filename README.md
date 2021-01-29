@@ -18,11 +18,13 @@ A self-contained C# WPF form for managing software applications which deal with 
 
 -User-initiated downloads (rather than automatic)
 
+-Automatic self-updating (kind of. It's a big headache, but I've completed a "good enough" workaround.) 
+
 **PLANNED FEATURES:**
 
--Automatic self-updating
-
 -Version selection
+
+-~~Automatic self-updating~~
 
 -~~Customizable install locations~~
 
