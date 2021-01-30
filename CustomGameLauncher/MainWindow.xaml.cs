@@ -9,6 +9,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Forms;
 using System.Security.AccessControl;
 using System.Security.Principal;
+using System.Collections.Generic;
 
 namespace CustomGameLauncher
 {
@@ -49,7 +50,11 @@ namespace CustomGameLauncher
             subMinor = short.Parse(_versionStrings[2]);
         }
 
-        // Method for comparing local game version with online version.
+        /// <summary>
+        /// Method for comparing local game version with online version.
+        /// </summary>
+        /// <param name="_otherVersion"> The latest online release of the software. </param>
+        /// <returns> True if the versions are not equal, false if they are. </returns>
         internal bool IsDifferentThan(Version _otherVersion)
         {
             if (major != _otherVersion.major)
@@ -73,7 +78,11 @@ namespace CustomGameLauncher
             return false;
         }
 
-        // Method for comparing online version with local game version.
+        /// <summary>
+        /// Method for comparing online version with local game version.
+        /// </summary>
+        /// <param name="_localVersion"> The local version of the software stored in its main directory. </param>
+        /// <returns> True if the latest version online is greater than the local version, false if not. </returns>
         internal bool IsGreaterThan(Version _localVersion)
         {
             if (major > _localVersion.major)
@@ -97,7 +106,60 @@ namespace CustomGameLauncher
             return false;
         }
 
-        // ToString() override to return the version numbers separated by dots.
+        /// <summary>
+        /// Loops through all of the release tags at a web address (intended for github releases) and stores existing tags in a list.
+        /// </summary>
+        /// <param name="address"> The web location containing app releases. </param>
+        /// <param name="latest"> The latest public release version. </param>
+        /// <returns> A list containing all publicly available versions of the software. </returns>
+        internal List<string> LoopThroughTags(string address, Version latest)
+        {
+            List<string> availableVersions = new List<string>();
+
+            for (int i = latest.major; i >= 0; i--)
+            {
+                for (int j = 9; j >= 0; j--)
+                {
+                    for (int k = 9; k >= 0; k--)
+                    {
+                        string ver = $"{i}.{j}.{k}";
+
+                        try
+                        {
+                            string url = address + ver;
+                            if (!string.IsNullOrEmpty(url))
+                            {
+                                UriBuilder uriBuilder = new UriBuilder(url);
+                                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uriBuilder.Uri);
+                                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+
+                                if (response.StatusCode == HttpStatusCode.OK)
+                                {
+                                    availableVersions.Add(ver);
+                                }
+                                else
+                                {
+                                    continue;
+                                }
+                            }
+                        }
+                        // Link probably returned a 404; move onto the next tag.
+                        catch (Exception ex)
+                        {
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            return availableVersions;
+        }
+
+
+        /// <summary>
+        /// ToString() override to return the version numbers separated by dots.
+        /// </summary>
+        /// <returns> The version number separated by dots. </returns>
         public override string ToString()
         {
             return $"{major}.{minor}.{subMinor}";
@@ -109,8 +171,8 @@ namespace CustomGameLauncher
         Ready,
         Failed,
         Waiting,
-        DownloadingGame,
-        DownloadingUpdate
+        DownloadingSoftware,
+        InstallingUpdate
     }
 
     /// <summary>
@@ -146,11 +208,11 @@ namespace CustomGameLauncher
                     case LauncherStatus.Waiting:
                         PlayButton.Content = "Start Download";
                         break;
-                    case LauncherStatus.DownloadingGame:
-                        PlayButton.Content = "Downloading Game...";
+                    case LauncherStatus.DownloadingSoftware:
+                        PlayButton.Content = "Downloading Software...";
                         break;
-                    case LauncherStatus.DownloadingUpdate:
-                        PlayButton.Content = "Downloading Update...";
+                    case LauncherStatus.InstallingUpdate:
+                        PlayButton.Content = "Installing Update...";
                         break;
                     default:
                         break;
@@ -194,7 +256,7 @@ namespace CustomGameLauncher
                     {
                         // Set launcher status to Ready.
                         Status = LauncherStatus.Ready;
-                        PercentageText.Text = "Game up to date. Ready to play!";
+                        PercentageText.Text = "The application up to date. Ready to launch!";
                     }
                 }
                 // This should only happen if the download location changes and nobody updates the web link stored into onlineVersion,
@@ -202,7 +264,7 @@ namespace CustomGameLauncher
                 catch (Exception ex)
                 {
                     Status = LauncherStatus.Failed;
-                    System.Windows.MessageBox.Show($"Error checking for game updates: {ex}");
+                    System.Windows.MessageBox.Show($"Error checking for updates: {ex}");
                 }
             }
             // If a local version does not exist...
@@ -211,7 +273,7 @@ namespace CustomGameLauncher
                 // Set the launcher status to waiting and prompt the user to initiate download.
                 needsUpdate = false;
                 Status = LauncherStatus.Waiting;
-                PercentageText.Text = "Game available for download.";
+                PercentageText.Text = "The application is available for download.";
             }
         }
 
@@ -229,12 +291,12 @@ namespace CustomGameLauncher
                 // If the download is an update, set status accordingly.
                 if (_isUpdate)
                 {
-                    Status = LauncherStatus.DownloadingUpdate;
+                    Status = LauncherStatus.InstallingUpdate;
                 }
                 // If the download is a fresh install, set status accordingly.
                 else
                 {
-                    Status = LauncherStatus.DownloadingGame;
+                    Status = LauncherStatus.DownloadingSoftware;
                     _onlineVersion = new Version(webClient.DownloadString("https://github.com/SheaMcAuley995/Cosmechanics/releases/latest/download/Version.txt")); // <- Where the version file is found.
                 }
 
@@ -302,7 +364,7 @@ namespace CustomGameLauncher
                 // Update the launcher version text & set status to ready.
                 VersionText.Text = onlineVersion;
                 Status = LauncherStatus.Ready;
-                PercentageText.Text = "Game up to date. Ready to play!";
+                PercentageText.Text = "The application is up to date. Ready to launch!";
             }
             // This should only happen if something goes wrong in the extraction or if there's an IO error 
             // (permissions problem or process in use, probably) during the writing of the version file.
@@ -322,6 +384,7 @@ namespace CustomGameLauncher
 
         private void Window_ContentRendered(object sender, EventArgs e)
         {
+            // Check for available updates to the launcher as soon as the main window renders.
             versionFile = Path.Combine(Directory.GetCurrentDirectory(), "Version.txt");
 
             // If a local version already exists...
@@ -358,13 +421,8 @@ namespace CustomGameLauncher
                             Close();
                         }
                     }
-                    // Otherwise...
-                    else
-                    {
-                        // Set launcher status to Ready.
-                        Status = LauncherStatus.Ready;
-                        PercentageText.Text = "Game up to date. Ready to play!";
-                    }
+                    // Otherwise, there are no available updates to the launcher so nothing needs to happen.
+                    else { }
                 }
                 // This should only happen if the download location changes and nobody updates the web link stored into onlineVersion,
                 // or if there are connection problems.
@@ -389,6 +447,12 @@ namespace CustomGameLauncher
                     sw.WriteLine(onlineVersion);
                 }
             }
+
+            //// TESTING TAG LOOPS
+            //WebClient client = new WebClient();
+            //Version latestVersion = new Version(client.DownloadString("https://github.com/zachoriel/ApplicationLauncher/releases/latest/download/Version.txt"));
+
+            //latestVersion.LoopThroughTags("https://github.com/zachoriel/ApplicationLauncher/releases/tag/", latestVersion);
         }
 
         /// <summary>
@@ -402,7 +466,7 @@ namespace CustomGameLauncher
                 // Bring up the Windows system's Browse window.
                 DialogResult result = browserDialog.ShowDialog();
 
-                // If the selected directory is valid and not empty...
+                // If the user presses "Ok" and the selected directory is not empty...
                 if (result == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(browserDialog.SelectedPath))
                 {
                     // If the user has writing permissions to their selected directory...
@@ -540,6 +604,14 @@ namespace CustomGameLauncher
                 {
                     extractionPath = sr.ReadLine();
                 }
+
+                // Special case for if the saved location is empty (should only happen if the program is exited before an initial location is picked)...
+                if (string.IsNullOrWhiteSpace(extractionPath))
+                {
+                    // Prompt the user to pick an installation location.
+                    System.Windows.MessageBox.Show("Please select an install location.");
+                    PickLocation(false);
+                }
             }
 
             versionFile = Path.Combine(extractionPath, "Cafe Interstellar", "Cosmechanics_Build", "Version.txt");
@@ -552,7 +624,7 @@ namespace CustomGameLauncher
         private void BackButton_Click(object sender, RoutedEventArgs e)
         {
             // Only go back to game selection if a download is not in progress.
-            if (Status != LauncherStatus.DownloadingGame && Status != LauncherStatus.DownloadingUpdate)
+            if (Status != LauncherStatus.DownloadingSoftware && Status != LauncherStatus.InstallingUpdate)
             {
                 // Show the game selection elements.
                 GameSelectionText.Visibility = Visibility.Visible;

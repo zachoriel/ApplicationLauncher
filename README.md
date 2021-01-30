@@ -1,6 +1,6 @@
 # AppLauncher
 
-A self-contained C# WPF form for managing software applications which deal with regular updates. 
+A self-contained WPF form for managing software applications which deal with regular updates. 
 
 ### **COMPLETED FEATURES:**
 
@@ -10,13 +10,13 @@ A self-contained C# WPF form for managing software applications which deal with 
 
 -Version tracking
 
--Customizable install locations
+-Custom install locations
 
 -Multi-app selection
 
 -Download progress bar
 
--User-initiated downloads (rather than automatic)
+-User-initiated downloads
 
 -Automatic self-updating (kind of. It's a big headache, but I've completed a "good enough" workaround.) 
 
@@ -26,9 +26,9 @@ A self-contained C# WPF form for managing software applications which deal with 
 
 -~~Automatic self-updating~~
 
--~~Customizable install locations~~
+-~~Custom install locations~~
 
--~~User-initiated downloads (rather than automatic)~~
+-~~User-initiated downloads~~
 
 -~~Download progress bar~~
 
