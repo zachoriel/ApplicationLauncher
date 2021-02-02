@@ -7,8 +7,6 @@ using System.Net;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Forms;
-using System.Security.AccessControl;
-using System.Security.Principal;
 using System.Collections.Generic;
 
 namespace CustomGameLauncher
@@ -470,7 +468,7 @@ namespace CustomGameLauncher
                 if (result == System.Windows.Forms.DialogResult.OK && !string.IsNullOrWhiteSpace(browserDialog.SelectedPath))
                 {
                     // If the user has writing permissions to their selected directory...
-                    if (DirectoryHasPermissions(browserDialog.SelectedPath, FileSystemRights.CreateDirectories))
+                    if (DirectoryHasPermissions(browserDialog.SelectedPath))
                     {
                         // If an installation already exists and we're changing the path...
                         if (changingLocation)
@@ -514,43 +512,32 @@ namespace CustomGameLauncher
         /// <summary>
         /// Checks if the user has permissions to a given directory.
         /// </summary>
-        /// <param name="folderPath"> The full path to be checked for permissions. </param>
-        /// <param name="accessRight"> The access right to be checked for. Example: 'Write' or 'CreateDirectories'. </param>
-        /// <returns> True if the user does have the passed-in access right, false if they do not. </returns>
-        bool DirectoryHasPermissions(string folderPath, FileSystemRights accessRight)
+        /// <param name="folderPath"> The full path to be checked for write permissions. </param>
+        /// <returns> True if the user does have write permissions to the passed-in folder, false if they do not. </returns>
+        bool DirectoryHasPermissions(string folderPath)
         {
             // Automatically return false if the path is empty.
             if (string.IsNullOrEmpty(folderPath)) return false;
 
+            // Try to write a dummy file to the given directory.
             try
             {
-                // Get access rules for the current user.
-                DirectoryInfo di = new DirectoryInfo(folderPath);
-                AuthorizationRuleCollection rules = di.GetAccessControl().GetAccessRules(true, true, typeof(System.Security.Principal.SecurityIdentifier));
-                WindowsIdentity identity = WindowsIdentity.GetCurrent(); // The logged-in user.
-
-                // For every file access rule...
-                foreach (FileSystemAccessRule rule in rules)
+                string dummyFile = Path.Combine(folderPath, "Testing Permissions Dummy File.txt");
+                using (StreamWriter sw = File.CreateText(dummyFile))
                 {
-                    // If the user has a permission rule...
-                    if (identity.Groups.Contains(rule.IdentityReference) || identity.Owner.Equals(rule.IdentityReference))
-                    {
-                        // If that permission rule matches the one we're checking for...
-                        if ((accessRight & rule.FileSystemRights) == accessRight)
-                        {
-                            // If that permission is set to 'Allow'...
-                            if (rule.AccessControlType == AccessControlType.Allow)
-                            {
-                                // The user has permissions for that folder and we can return true.
-                                return true;
-                            }
-                        }
-                    }
+                    sw.WriteLine("testing");
                 }
+
+                // Delete the dummy file if it is successfully created.
+                File.Delete(dummyFile);
+
+                return true;
             }
-            // Return false by default if the check cannot be performed.
-            catch { }
-            return false;
+            // If the attempt fails, we can assume the user doesn't have write permissions for that directory.
+            catch 
+            {
+                return false;
+            }
         }
 
         private void ChangeInstallLocation_Click(object sender, RoutedEventArgs e)
@@ -616,6 +603,33 @@ namespace CustomGameLauncher
 
             versionFile = Path.Combine(extractionPath, "Cafe Interstellar", "Cosmechanics_Build", "Version.txt");
             gameZip = Path.Combine(rootPath, "Cosmechanics_Build.zip"); // <- Will need to be maintained OR kept consistent.
+
+            // Check if the game has been manually moved from its saved location.
+            try
+            {
+                // If this doesn't throw an error, then everything's in the right location and we can continue.
+                using (StreamReader sr = File.OpenText(versionFile)) { }
+            }
+            // This means the game folder has been manually moved from its saved location.
+            catch
+            {
+                MessageBoxResult result = System.Windows.MessageBox.Show("It looks like you've downloaded this game before, but I'm  " +
+                "having a hard time finding it. This could happen if the game folder was manually moved to another location. " +
+                "Would you like to re-install the game at " + extractionPath + "?",
+                "Unable to locate game.", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+
+                if (result.ToString() == "No")
+                {
+                    // Prompt the user to pick an installation location.
+                    System.Windows.MessageBox.Show("Please select another install location.");
+                    PickLocation(false);
+                }
+                else if (result.ToString() == "Cancel")
+                {
+                    // Close the launcher.
+                    Close();
+                }
+            }
 
             // Check for updates as soon as the install location is determined.
             CheckForUpdates("https://github.com/SheaMcAuley995/Cosmechanics/releases/latest/download/Version.txt");
